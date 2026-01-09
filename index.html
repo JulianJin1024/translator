@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简翻译 - 通义千问驱动</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .translation-area {
+            min-height: 280px;
+            transition: all 0.4s ease;
+        }
+
+        .loader-ring {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
+
+        .btn-gradient:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center p-4 md:p-10">
+
+    <!-- Header -->
+    <header class="w-full max-w-6xl flex justify-between items-center mb-10">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 btn-gradient rounded-2xl flex items-center justify-center shadow-lg">
+                <i class="fas fa-language text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">通义千问 <span class="text-indigo-600 font-light">|
+                        智能翻译</span></h1>
+                <p class="text-xs text-slate-400 font-medium tracking-widest uppercase">Powered by Qwen-Max / Qwen-Plus
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-6xl">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- Source Section -->
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center px-2 text-slate-500">
+                    <span class="text-xs font-bold uppercase tracking-tighter">原文输入 (Source)</span>
+                    <button onclick="clearText()" class="hover:text-rose-500 transition-colors">
+                        <i class="fas fa-trash-alt mr-1"></i> 清空
+                    </button>
+                </div>
+                <div class="glass-panel rounded-[2rem] shadow-xl overflow-hidden ring-1 ring-slate-200">
+                    <textarea id="sourceInput" placeholder="请输入中文或英文内容..."
+                        class="w-full p-8 translation-area bg-transparent outline-none text-xl text-slate-700 leading-relaxed resize-none"></textarea>
+                </div>
+            </div>
+
+            <!-- Target Section -->
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center px-2 text-slate-500">
+                    <span class="text-xs font-bold uppercase tracking-tighter">译文结果 (Translation)</span>
+                    <button onclick="copyResult()" class="hover:text-indigo-600 transition-colors">
+                        <i class="fas fa-copy mr-1"></i> 复制
+                    </button>
+                </div>
+                <div class="relative glass-panel rounded-[2rem] shadow-xl overflow-hidden ring-1 ring-slate-200">
+                    <div id="targetOutput"
+                        class="w-full p-8 translation-area overflow-y-auto text-xl text-slate-700 leading-relaxed whitespace-pre-wrap">
+                        <span class="text-slate-300 italic">译文将显示在这里...</span>
+                    </div>
+
+                    <!-- AI Tools -->
+                    <!-- <div id="aiTools" class="hidden absolute bottom-6 left-6 right-6 flex gap-3 p-2 bg-white/50 backdrop-blur rounded-2xl border border-white/50">
+                        <button onclick="polishText()" class="flex-1 py-2 text-xs font-bold text-indigo-600 hover:bg-white rounded-xl transition-all">
+                            ✨ 地道润色
+                        </button>
+                        <button onclick="analyzeText()" class="flex-1 py-2 text-xs font-bold text-purple-600 hover:bg-white rounded-xl transition-all">
+                            📖 语法解析
+                        </button>
+                    </div> -->
+
+                    <!-- Loader overlay -->
+                    <div id="loadingOverlay"
+                        class="hidden absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-20">
+                        <div class="loader-ring"></div>
+                        <p class="text-sm font-bold text-indigo-600 animate-pulse">通义千问正在思考...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-12 flex justify-center">
+            <button onclick="handleTranslate()" id="mainBtn"
+                class="btn-gradient text-white px-20 py-5 rounded-2xl font-bold shadow-xl flex items-center gap-4 transition-all">
+                <span class="text-lg">开始翻译</span>
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+
+        <!-- Analysis Panel -->
+        <div id="analysisPanel"
+            class="hidden mt-10 glass-panel p-8 rounded-[2rem] shadow-xl border-l-4 border-l-indigo-500">
+            <div class="flex items-center gap-3 mb-4">
+                <i class="fas fa-lightbulb text-yellow-500 text-xl"></i>
+                <h3 class="text-lg font-bold text-slate-800">AI 深度解析</h3>
+            </div>
+            <div id="analysisContent" class="text-slate-600 leading-relaxed text-sm lg:text-base"></div>
+        </div>
+
+        <!-- Error Alert -->
+        <div id="errorAlert"
+            class="hidden mt-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-center text-sm font-medium">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <span id="errorMsg"></span>
+        </div>
+    </main>
+
+    <script>
+        // 配置通义千问 API
+        const API_KEY = "sk-87c524db49d347a5a678f54b7ba7c4bc";
+        const ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+
+        const sourceEl = document.getElementById('sourceInput');
+        const targetEl = document.getElementById('targetOutput');
+        const loaderEl = document.getElementById('loadingOverlay');
+        const aiTools = document.getElementById('aiTools');
+        const analysisPanel = document.getElementById('analysisPanel');
+        const analysisContent = document.getElementById('analysisContent');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorMsg = document.getElementById('errorMsg');
+
+        async function qwenRequest(messages) {
+            const response = await fetch(ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "qwen-plus",
+                    messages: messages,
+                    temperature: 0.7
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error?.message || "请求失败，请检查 API Key 状态。");
+            }
+            return data.choices[0].message.content;
+        }
+
+        // 修复：更改函数名以避免与浏览器内置属性或命名空间冲突
+        async function handleTranslate() {
+            const text = sourceEl.value.trim();
+            if (!text) return;
+
+            setLoading(true);
+            errorAlert.classList.add('hidden');
+
+            try {
+                const prompt = `你是一个精通中英互译的专家。
+                任务：根据输入内容的语言，将其翻译为对应的语言（中译英或英译中）。
+                要求：译文要自然、通顺、符合母语习惯。
+                限制：直接返回译文内容，不要包含任何多余的解释。
+                
+                待处理内容：${text}`;
+
+                const result = await qwenRequest([{ role: "user", content: prompt }]);
+                targetEl.innerText = result;
+                aiTools.classList.remove('hidden');
+                analysisPanel.classList.add('hidden');
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function polishText() {
+            const currentText = targetEl.innerText;
+            if (!currentText || currentText.includes('译文将显示')) return;
+
+            setLoading(true);
+            try {
+                const prompt = `你是一个资深的语言编辑。请润色以下内容，使其表达更地道、更具文学性或专业性（视内容而定），只需返回润色后的结果：\n\n${currentText}`;
+                const result = await qwenRequest([{ role: "user", content: prompt }]);
+                targetEl.innerText = result;
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function analyzeText() {
+            const source = sourceEl.value;
+            const target = targetEl.innerText;
+            if (!target || target.includes('译文将显示')) return;
+
+            setLoading(true);
+            try {
+                const prompt = `你是一个语言教学专家。请根据原文和译文，分析其中的核心词汇、短语用法以及语法难点。请用中文列出分析结果。
+                原文：${source}
+                译文：${target}`;
+
+                const result = await qwenRequest([{ role: "user", content: prompt }]);
+                analysisContent.innerHTML = result.replace(/\n/g, '<br>');
+                analysisPanel.classList.remove('hidden');
+                analysisPanel.scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(isLoading) {
+            loaderEl.classList.toggle('hidden', !isLoading);
+        }
+
+        function showError(msg) {
+            errorMsg.innerText = msg;
+            errorAlert.classList.remove('hidden');
+        }
+
+        function clearText() {
+            sourceEl.value = "";
+            targetEl.innerHTML = '<span class="text-slate-300 italic">译文将显示在这里...</span>';
+            aiTools.classList.add('hidden');
+            analysisPanel.classList.add('hidden');
+            errorAlert.classList.add('hidden');
+        }
+
+        function copyResult() {
+            const text = targetEl.innerText;
+            if (text && !text.includes('译文将显示')) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = document.querySelector('button[onclick="copyResult()"]');
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check text-green-500 mr-1"></i> 已复制';
+                    setTimeout(() => btn.innerHTML = original, 2000);
+                });
+            }
+        }
+
+        sourceEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleTranslate();
+            }
+        });
+    </script>
+</body>
+
+</html>
